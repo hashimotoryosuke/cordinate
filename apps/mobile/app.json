@@ -1,0 +1,37 @@
+{
+  "expo": {
+    "name": "Cordinate",
+    "slug": "cordinate",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "light",
+    "scheme": "cordinate",
+    "splash": {
+      "image": "./assets/splash.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#fafafa"
+    },
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.cordinate.app",
+      "infoPlist": {
+        "NSCameraUsageDescription": "クローゼットの服を撮影するために使用します",
+        "NSPhotoLibraryUsageDescription": "クローゼットに服の写真を追加するために使用します"
+      }
+    },
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#fafafa"
+      },
+      "package": "com.cordinate.app",
+      "permissions": ["CAMERA", "READ_EXTERNAL_STORAGE"]
+    },
+    "plugins": [
+      "expo-router",
+      ["expo-camera", { "cameraPermission": "クローゼットの服を撮影するために使用します" }],
+      ["expo-image-picker", { "photosPermission": "服の写真をクローゼットに追加するために使用します" }]
+    ]
+  }
+}
