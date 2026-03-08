@@ -1,4 +1,5 @@
-export default function HomePage() {
+import React from 'react'
+export default function HomePage(): React.JSX.Element {
   return (
     <main className="flex min-h-screen flex-col items-center justify-center gap-6 p-8">
       <h1 className="font-serif text-4xl font-bold tracking-tight">Cordinate</h1>
