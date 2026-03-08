@@ -6,7 +6,8 @@ import { coordinates, clothingItems, productSuggestions } from '../db/schema'
 import { eq, and } from 'drizzle-orm'
 import { authMiddleware } from '../middleware/auth'
 
-export const coordinateRoutes = new Hono()
+import type { AppEnv } from '../types'
+export const coordinateRoutes = new Hono<AppEnv>()
 
 coordinateRoutes.use('*', authMiddleware)
 

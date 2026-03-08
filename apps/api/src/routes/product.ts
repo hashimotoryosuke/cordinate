@@ -4,7 +4,8 @@ import { productSuggestions } from '../db/schema'
 import { eq } from 'drizzle-orm'
 import { authMiddleware } from '../middleware/auth'
 
-export const productRoutes = new Hono()
+import type { AppEnv } from '../types'
+export const productRoutes = new Hono<AppEnv>()
 
 productRoutes.use('*', authMiddleware)
 

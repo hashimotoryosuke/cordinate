@@ -6,6 +6,7 @@ import { authRoutes } from './routes/auth'
 import { closetRoutes } from './routes/closet'
 import { coordinateRoutes } from './routes/coordinate'
 import { productRoutes } from './routes/product'
+import { uploadRoutes } from './routes/upload'
 
 const app = new Hono()
 
@@ -27,6 +28,7 @@ app.route('/auth', authRoutes)
 app.route('/closet', closetRoutes)
 app.route('/coordinates', coordinateRoutes)
 app.route('/products', productRoutes)
+app.route('/upload', uploadRoutes)
 
 const port = Number(process.env.PORT ?? 3001)
 
