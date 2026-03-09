@@ -1,4 +1,6 @@
 @import "tailwindcss";
+@source "../**/*.{ts,tsx}";
+@source "../../**/*.{ts,tsx}";
 
 :root {
   --color-primary: #1a1a1a;
