@@ -44,14 +44,16 @@ export default function CoordinateScreen() {
   const { token } = useAuth()
   const [coordinates, setCoordinates] = useState<Coordinate[]>([])
   const [isLoading, setIsLoading] = useState(true)
+  const [fetchError, setFetchError] = useState<string | null>(null)
 
   const fetchCoordinates = useCallback(async () => {
     setIsLoading(true)
+    setFetchError(null)
     try {
       const res = await apiRequest<{ data: Coordinate[] }>('/coordinates', { token: token ?? undefined })
       setCoordinates(res.data)
-    } catch {
-      setCoordinates([])
+    } catch (err) {
+      setFetchError(err instanceof Error ? err.message : 'データの取得に失敗しました')
     } finally {
       setIsLoading(false)
     }
@@ -100,6 +102,14 @@ export default function CoordinateScreen() {
       {isLoading ? (
         <View style={styles.centered}>
           <ActivityIndicator size="large" color={colors.primary} />
+        </View>
+      ) : fetchError ? (
+        <View style={styles.centered}>
+          <Ionicons name="alert-circle-outline" size={48} color="#DC2626" />
+          <Text style={styles.emptyTitle}>{fetchError}</Text>
+          <TouchableOpacity style={styles.emptyButton} onPress={fetchCoordinates} activeOpacity={0.8}>
+            <Text style={styles.emptyButtonText}>再試行</Text>
+          </TouchableOpacity>
         </View>
       ) : coordinates.length === 0 ? (
         <View style={styles.centered}>

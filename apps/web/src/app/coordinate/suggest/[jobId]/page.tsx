@@ -33,8 +33,19 @@ export default function CoordinateSuggestPage({ params }: PageProps): React.JSX.
 
   const inspirationImageUrl = searchParams.get('imageUrl') ?? ''
 
+  const [savingIndex, setSavingIndex] = React.useState<number | null>(null)
+  const [savedIndices, setSavedIndices] = React.useState<Set<number>>(new Set())
+  const [saveError, setSaveError] = React.useState<string | null>(null)
+  const [timedOut, setTimedOut] = React.useState(false)
+
+  // Hard timeout: stop polling after 2 minutes
+  React.useEffect(() => {
+    const t = setTimeout(() => setTimedOut(true), 2 * 60 * 1000)
+    return () => clearTimeout(t)
+  }, [])
+
   const { data, error } = useSWR(
-    accessToken ? `/coordinates/jobs/${jobId}` : null,
+    accessToken && !timedOut ? `/coordinates/jobs/${jobId}` : null,
     () =>
       apiRequest<{ data: JobResult }>(`/coordinates/jobs/${jobId}`, { token: accessToken! }),
     {
@@ -43,10 +54,6 @@ export default function CoordinateSuggestPage({ params }: PageProps): React.JSX.
       revalidateOnFocus: false,
     }
   )
-
-  const [savingIndex, setSavingIndex] = React.useState<number | null>(null)
-  const [savedIndices, setSavedIndices] = React.useState<Set<number>>(new Set())
-  const [saveError, setSaveError] = React.useState<string | null>(null)
 
   async function handleSave(suggestion: Suggestion, index: number) {
     if (!accessToken || savingIndex !== null) return
@@ -74,6 +81,18 @@ export default function CoordinateSuggestPage({ params }: PageProps): React.JSX.
   }
 
   const jobData = data?.data
+
+  // Timeout state
+  if (timedOut && (!jobData || jobData.status === 'pending' || jobData.status === 'processing')) {
+    return (
+      <div className="flex min-h-screen flex-col items-center justify-center gap-6 px-4" style={{ backgroundColor: 'var(--color-background)' }}>
+        <p className="text-center text-sm" style={{ color: 'var(--color-foreground)' }}>タイムアウトしました。もう一度お試しください。</p>
+        <Link href="/coordinate/new" className="rounded-full px-6 py-3 text-sm font-medium" style={{ backgroundColor: 'var(--color-primary)', color: 'var(--color-primary-foreground)' }}>
+          やり直す
+        </Link>
+      </div>
+    )
+  }
 
   // Loading / polling state
   if (!jobData || jobData.status === 'pending' || jobData.status === 'processing') {
