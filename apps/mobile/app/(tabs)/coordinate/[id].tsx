@@ -71,17 +71,22 @@ export default function CoordinateDetailScreen() {
   const [isLoadingProducts, setIsLoadingProducts] = useState(true)
 
   useEffect(() => {
+    const controller = new AbortController()
+    const { signal } = controller
+
     async function fetchData() {
       setIsLoadingCoordinate(true)
       setIsLoadingProducts(true)
 
       const [coordResult, prodResult] = await Promise.allSettled([
-        apiRequest<{ data: Coordinate }>(`/coordinates/${id}`, { token: token ?? undefined }),
+        apiRequest<{ data: Coordinate }>(`/coordinates/${id}`, { token: token ?? undefined, signal }),
         apiRequest<{ data: { missingCategories: string[]; products: ProductSuggestion[] } }>(
           `/products/coordinates/${id}`,
-          { token: token ?? undefined }
+          { token: token ?? undefined, signal }
         ),
       ])
+
+      if (signal.aborted) return
 
       if (coordResult.status === 'fulfilled') {
         setCoordinate(coordResult.value.data)
@@ -101,6 +106,7 @@ export default function CoordinateDetailScreen() {
     }
 
     fetchData()
+    return () => controller.abort()
   }, [id, token])
 
   function renderProductCard({ item }: { item: ProductSuggestion }) {

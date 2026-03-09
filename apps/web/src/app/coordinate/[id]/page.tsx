@@ -49,7 +49,7 @@ export default function CoordinateDetailPage({
   const { id } = React.use(params)
   const { accessToken } = useAuth()
 
-  const { data: coordData, isLoading: coordLoading } = useSWR(
+  const { data: coordData, isLoading: coordLoading, error: coordError } = useSWR(
     accessToken ? `/coordinates/${id}` : null,
     () => apiRequest<{ data: Coordinate }>(`/coordinates/${id}`, { token: accessToken! }),
     { revalidateOnFocus: false }
@@ -106,6 +106,14 @@ export default function CoordinateDetailPage({
               className="h-8 w-8 animate-spin rounded-full border-2"
               style={{ borderColor: 'var(--color-accent)', borderTopColor: 'transparent' }}
             />
+          </div>
+        )}
+
+        {!coordLoading && (coordError || !coord) && (
+          <div className="flex flex-col items-center justify-center py-20 gap-2 text-center">
+            <p className="text-sm" style={{ color: 'var(--color-muted-foreground)' }}>
+              コーデが見つかりませんでした
+            </p>
           </div>
         )}
 

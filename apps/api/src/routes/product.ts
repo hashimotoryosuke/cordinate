@@ -40,7 +40,9 @@ productRoutes.get('/coordinates/:coordinateId', async (c) => {
     .where(eq(productSuggestions.coordinateId, coordinateId))
 
   if (cached.length > 0) {
-    const missingCategories = [...new Set(cached.map((p) => p.category).filter(Boolean))] as string[]
+    const cachedCategorySet = new Set(cached.map((p) => p.category).filter(Boolean))
+    // Preserve ALL_CATEGORIES order for consistent UI rendering
+    const missingCategories = ALL_CATEGORIES.filter((cat) => cachedCategorySet.has(cat))
     return c.json({ data: { missingCategories, products: cached } })
   }
 
@@ -94,14 +96,13 @@ productRoutes.get('/coordinates/:coordinateId', async (c) => {
   return c.json({ data: { missingCategories: targetCategories, products: saved } })
 })
 
-// GET /products/search?category=&keyword=&minPrice=&maxPrice=
+// GET /products/search?category=
 productRoutes.get(
   '/search',
   zValidator(
     'query',
     z.object({
       category: z.string().optional(),
-      keyword: z.string().optional(),
     })
   ),
   async (c) => {
