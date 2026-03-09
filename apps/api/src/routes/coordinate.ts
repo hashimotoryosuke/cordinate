@@ -123,6 +123,24 @@ coordinateRoutes.post(
   }
 )
 
+// GET /coordinates/:id — get single coordinate by id
+coordinateRoutes.get('/:id', async (c) => {
+  const { userId } = c.get('user')
+  const { id } = c.req.param()
+
+  const [coord] = await db
+    .select()
+    .from(coordinates)
+    .where(and(eq(coordinates.id, id), eq(coordinates.userId, userId)))
+    .limit(1)
+
+  if (!coord) {
+    return c.json({ error: 'Not found', code: 'NOT_FOUND', statusCode: 404 }, 404)
+  }
+
+  return c.json({ data: coord })
+})
+
 // GET /coordinates — list user's saved coordinates
 coordinateRoutes.get(
   '/',

@@ -49,9 +49,9 @@ export default function CoordinateDetailPage({
   const { id } = React.use(params)
   const { accessToken } = useAuth()
 
-  const { data: coordListData, isLoading: coordLoading } = useSWR(
-    accessToken ? '/coordinates' : null,
-    () => apiRequest<{ data: Coordinate[] }>('/coordinates', { token: accessToken! }),
+  const { data: coordData, isLoading: coordLoading } = useSWR(
+    accessToken ? `/coordinates/${id}` : null,
+    () => apiRequest<{ data: Coordinate }>(`/coordinates/${id}`, { token: accessToken! }),
     { revalidateOnFocus: false }
   )
 
@@ -64,7 +64,7 @@ export default function CoordinateDetailPage({
     { revalidateOnFocus: false }
   )
 
-  const coord = coordListData?.data.find((c) => c.id === id)
+  const coord = coordData?.data
   const products = productsData?.data
 
   return (

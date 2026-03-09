@@ -91,7 +91,8 @@ export async function searchProducts(category: string): Promise<RakutenProduct[]
     hits: String(PRODUCTS_PER_CATEGORY),
     sort: '-reviewCount',     // popular items first
     imageFlag: '1',           // only items with images
-    formatVersion: '2',
+    // formatVersion omitted — use default v1 format: Items[].Item (uppercase)
+    // formatVersion=2 changes to Items[].item (lowercase) which breaks the type mapping
   })
 
   try {

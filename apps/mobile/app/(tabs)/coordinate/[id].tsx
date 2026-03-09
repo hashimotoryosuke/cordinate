@@ -75,31 +75,29 @@ export default function CoordinateDetailScreen() {
       setIsLoadingCoordinate(true)
       setIsLoadingProducts(true)
 
-      try {
-        const coordRes = await apiRequest<{ data: Coordinate[] }>('/coordinates', {
-          token: token ?? undefined,
-        })
-        const found = coordRes.data.find((c) => c.id === id) ?? null
-        setCoordinate(found)
-      } catch {
-        setCoordinate(null)
-      } finally {
-        setIsLoadingCoordinate(false)
-      }
-
-      try {
-        const prodRes = await apiRequest<{ data: { missingCategories: string[]; products: ProductSuggestion[] } }>(
+      const [coordResult, prodResult] = await Promise.allSettled([
+        apiRequest<{ data: Coordinate }>(`/coordinates/${id}`, { token: token ?? undefined }),
+        apiRequest<{ data: { missingCategories: string[]; products: ProductSuggestion[] } }>(
           `/products/coordinates/${id}`,
           { token: token ?? undefined }
-        )
-        setMissingCategories(prodRes.data.missingCategories)
-        setProducts(prodRes.data.products)
-      } catch {
+        ),
+      ])
+
+      if (coordResult.status === 'fulfilled') {
+        setCoordinate(coordResult.value.data)
+      } else {
+        setCoordinate(null)
+      }
+      setIsLoadingCoordinate(false)
+
+      if (prodResult.status === 'fulfilled') {
+        setMissingCategories(prodResult.value.data.missingCategories)
+        setProducts(prodResult.value.data.products)
+      } else {
         setMissingCategories([])
         setProducts([])
-      } finally {
-        setIsLoadingProducts(false)
       }
+      setIsLoadingProducts(false)
     }
 
     fetchData()
