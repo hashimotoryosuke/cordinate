@@ -17,6 +17,7 @@ export const config = {
   port: Number(optionalEnv('PORT', '3001')),
   databaseUrl: requireEnv('DATABASE_URL'),
   anthropicApiKey: process.env.ANTHROPIC_API_KEY,
+  rakutenAppId: process.env.RAKUTEN_APP_ID,
   r2: {
     accountId: process.env.CLOUDFLARE_R2_ACCOUNT_ID,
     accessKeyId: process.env.CLOUDFLARE_R2_ACCESS_KEY_ID,

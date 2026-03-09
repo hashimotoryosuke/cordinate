@@ -101,8 +101,9 @@ export default function CoordinatePage(): React.JSX.Element {
         {!isLoading && !error && coordinates.length > 0 && (
           <div className="grid grid-cols-2 gap-3">
             {coordinates.map((coord) => (
-              <div
+              <Link
                 key={coord.id}
+                href={`/coordinate/${coord.id}`}
                 className="overflow-hidden rounded-xl border flex flex-col"
                 style={{
                   borderColor: 'var(--color-border)',
@@ -138,7 +139,7 @@ export default function CoordinatePage(): React.JSX.Element {
                     {new Date(coord.createdAt).toLocaleDateString('ja-JP')}
                   </p>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         )}
