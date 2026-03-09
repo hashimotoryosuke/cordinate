@@ -1,7 +1,7 @@
-import React, { createContext, useContext, useEffect, useState } from 'react'
+import React, { createContext, useContext, useEffect, useState, useCallback } from 'react'
 import * as SecureStore from 'expo-secure-store'
 import { apiRequest } from '../lib/api'
-import type { User, AuthTokens } from '@cordinate/shared'
+import type { User, AuthResponse } from '@cordinate/shared'
 
 interface AuthContextType {
   user: User | null
@@ -14,12 +14,13 @@ interface AuthContextType {
 
 const AuthContext = createContext<AuthContextType | null>(null)
 
-const TOKEN_KEY = 'access_token'
+const REFRESH_TOKEN_KEY = 'cordinate_refresh'
 const USER_KEY = 'user_data'
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null)
+  // Access token kept in memory only; refresh token persisted in SecureStore
   const [token, setToken] = useState<string | null>(null)
+  const [user, setUser] = useState<User | null>(null)
   const [isLoading, setIsLoading] = useState(true)
 
   useEffect(() => {
@@ -28,55 +29,59 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   async function restoreSession() {
     try {
-      const storedToken = await SecureStore.getItemAsync(TOKEN_KEY)
-      const storedUser = await SecureStore.getItemAsync(USER_KEY)
-      if (storedToken && storedUser) {
-        setToken(storedToken)
-        setUser(JSON.parse(storedUser))
-      }
+      const storedRefresh = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY)
+      if (!storedRefresh) return
+      const res = await apiRequest<{ data: { accessToken: string; refreshToken: string } }>(
+        '/auth/refresh',
+        { method: 'POST', body: JSON.stringify({ refreshToken: storedRefresh }) }
+      )
+      await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, res.data.refreshToken)
+      setToken(res.data.accessToken)
+      const meRes = await apiRequest<{ data: User }>('/auth/me', { token: res.data.accessToken })
+      setUser(meRes.data)
     } catch {
-      // セッション復元に失敗した場合は無視
+      await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY)
     } finally {
       setIsLoading(false)
     }
   }
 
-  async function login(email: string, password: string) {
-    const res = await apiRequest<{ data: { user: User; tokens: AuthTokens } }>(
-      '/auth/login',
-      {
-        method: 'POST',
-        body: JSON.stringify({ email, password }),
-      }
-    )
-    const { user: loggedInUser, tokens } = res.data
-    await SecureStore.setItemAsync(TOKEN_KEY, tokens.accessToken)
-    await SecureStore.setItemAsync(USER_KEY, JSON.stringify(loggedInUser))
-    setToken(tokens.accessToken)
-    setUser(loggedInUser)
-  }
+  const login = useCallback(async (email: string, password: string) => {
+    const res = await apiRequest<{ data: AuthResponse }>('/auth/login', {
+      method: 'POST',
+      body: JSON.stringify({ email, password }),
+    })
+    await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, res.data.refreshToken)
+    await SecureStore.setItemAsync(USER_KEY, JSON.stringify(res.data.user))
+    setToken(res.data.accessToken)
+    setUser(res.data.user as User)
+  }, [])
 
-  async function register(name: string, email: string, password: string) {
-    const res = await apiRequest<{ data: { user: User; tokens: AuthTokens } }>(
-      '/auth/register',
-      {
-        method: 'POST',
-        body: JSON.stringify({ name, email, password }),
-      }
-    )
-    const { user: newUser, tokens } = res.data
-    await SecureStore.setItemAsync(TOKEN_KEY, tokens.accessToken)
-    await SecureStore.setItemAsync(USER_KEY, JSON.stringify(newUser))
-    setToken(tokens.accessToken)
-    setUser(newUser)
-  }
+  const register = useCallback(async (name: string, email: string, password: string) => {
+    const res = await apiRequest<{ data: AuthResponse }>('/auth/register', {
+      method: 'POST',
+      body: JSON.stringify({ name, email, password }),
+    })
+    await SecureStore.setItemAsync(REFRESH_TOKEN_KEY, res.data.refreshToken)
+    await SecureStore.setItemAsync(USER_KEY, JSON.stringify(res.data.user))
+    setToken(res.data.accessToken)
+    setUser(res.data.user as User)
+  }, [])
 
-  async function logout() {
-    await SecureStore.deleteItemAsync(TOKEN_KEY)
+  const logout = useCallback(async () => {
+    const refreshToken = await SecureStore.getItemAsync(REFRESH_TOKEN_KEY)
+    if (token && refreshToken) {
+      await apiRequest('/auth/logout', {
+        method: 'POST',
+        token,
+        body: JSON.stringify({ refreshToken }),
+      }).catch(() => {/* server-side failure is non-fatal */})
+    }
+    await SecureStore.deleteItemAsync(REFRESH_TOKEN_KEY)
     await SecureStore.deleteItemAsync(USER_KEY)
     setToken(null)
     setUser(null)
-  }
+  }, [token])
 
   return (
     <AuthContext.Provider value={{ user, token, isLoading, login, register, logout }}>
@@ -87,8 +92,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 export function useAuth(): AuthContextType {
   const ctx = useContext(AuthContext)
-  if (!ctx) {
-    throw new Error('useAuth must be used within AuthProvider')
-  }
+  if (!ctx) throw new Error('useAuth must be used within AuthProvider')
   return ctx
 }

@@ -1,5 +1,6 @@
-import React from 'react'
 'use client'
+import React from 'react'
+
 
 import { useState } from 'react'
 import Link from 'next/link'
@@ -7,7 +8,7 @@ import { useRouter } from 'next/navigation'
 import useSWR from 'swr'
 import type { ClothingItem, ClothingCategory } from '@cordinate/shared'
 import { apiRequest } from '@/lib/api'
-import { getToken, removeToken } from '@/lib/auth'
+import { useAuth } from '@/contexts/AuthContext'
 
 type CategoryFilter = 'all' | ClothingCategory
 
@@ -33,24 +34,24 @@ const CATEGORY_ORDER: CategoryFilter[] = [
   'other',
 ]
 
-function fetchCloset(token: string | undefined): Promise<ClothingItem[]> {
+function fetchCloset(token: string | null): Promise<ClothingItem[]> {
   if (!token) throw new Error('Unauthorized')
   return apiRequest<ClothingItem[]>('/closet', { token })
 }
 
 export default function ClosetPage(): React.JSX.Element {
   const router = useRouter()
-  const token = getToken()
+  const { accessToken, logout } = useAuth()
   const [activeCategory, setActiveCategory] = useState<CategoryFilter>('all')
 
   const { data: items, isLoading, error } = useSWR<ClothingItem[]>(
-    token ? '/closet' : null,
-    () => fetchCloset(token),
+    accessToken ? '/closet' : null,
+    () => fetchCloset(accessToken),
     { revalidateOnFocus: true }
   )
 
-  function handleLogout() {
-    removeToken()
+  async function handleLogout() {
+    await logout()
     router.push('/')
   }
 

@@ -7,7 +7,3 @@ export interface User {
   updatedAt: string
 }
 
-export interface AuthTokens {
-  accessToken: string
-  refreshToken: string
-}

@@ -1,5 +1,6 @@
-import React from 'react'
 'use client'
+import React from 'react'
+
 
 import { useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
@@ -21,7 +22,7 @@ export default function LoginPage(): React.JSX.Element {
     setIsSubmitting(true)
 
     try {
-      await login({ email, password })
+      await login(email, password)
       router.push('/closet')
     } catch (err) {
       setError(err instanceof Error ? err.message : 'ログインに失敗しました')

@@ -1,5 +1,6 @@
-import React from 'react'
 'use client'
+import React from 'react'
+
 
 import { useState, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
@@ -22,7 +23,7 @@ export default function RegisterPage(): React.JSX.Element {
     setIsSubmitting(true)
 
     try {
-      await register({ name, email, password })
+      await register(name, email, password)
       router.push('/closet')
     } catch (err) {
       setError(err instanceof Error ? err.message : '登録に失敗しました')

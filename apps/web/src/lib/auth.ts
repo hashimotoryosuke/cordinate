@@ -1,23 +1,4 @@
-import Cookies from 'js-cookie'
-
-const TOKEN_KEY = 'cordinate_token'
-
-export function getToken(): string | undefined {
-  return Cookies.get(TOKEN_KEY)
-}
-
-export function setToken(token: string): void {
-  Cookies.set(TOKEN_KEY, token, {
-    expires: 7,
-    sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
-  })
-}
-
-export function removeToken(): void {
-  Cookies.remove(TOKEN_KEY)
-}
-
-export function isAuthenticated(): boolean {
-  return Boolean(getToken())
-}
+// Access token is kept in memory only (AuthContext state) to prevent XSS token theft.
+// Refresh token is stored in localStorage (longer-lived; used only to re-issue access tokens).
+// This file exports the localStorage key as a named constant.
+export const REFRESH_TOKEN_KEY = 'cordinate_refresh'

@@ -6,6 +6,18 @@ import { clothingItems } from '../db/schema'
 import { eq, and, sql } from 'drizzle-orm'
 import { authMiddleware } from '../middleware/auth'
 import { enqueueTagging } from '../services/ai-tagger'
+import { config } from '../config'
+
+function isAllowedImageUrl(url: string): boolean {
+  try {
+    const { hostname } = new URL(url)
+    return config.allowedImageHosts.some(
+      (h) => hostname === h || hostname.endsWith(`.${h}`)
+    )
+  } catch {
+    return false
+  }
+}
 
 import type { AppEnv } from '../types'
 export const closetRoutes = new Hono<AppEnv>()
@@ -72,7 +84,9 @@ closetRoutes.post(
   zValidator(
     'json',
     z.object({
-      imageUrl: z.string().url(),
+      imageUrl: z.string().url().refine(isAllowedImageUrl, {
+        message: 'imageUrl must be from an allowed storage domain',
+      }),
       category: categoryEnum.optional(),
       colors: z.array(z.string()).optional(),
       tags: z.array(z.string()).optional(),
@@ -125,7 +139,7 @@ closetRoutes.patch(
     const [updated] = await db
       .update(clothingItems)
       .set({ ...updates, updatedAt: new Date() })
-      .where(eq(clothingItems.id, id))
+      .where(and(eq(clothingItems.id, id), eq(clothingItems.userId, userId)))
       .returning()
 
     return c.json({ data: updated })

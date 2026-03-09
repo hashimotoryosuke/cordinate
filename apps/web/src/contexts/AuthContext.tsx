@@ -3,81 +3,111 @@
 import React, {
   createContext,
   useContext,
+  useState,
+  useEffect,
   useCallback,
   type ReactNode,
 } from 'react'
-import useSWR from 'swr'
-import type { User } from '@cordinate/shared'
+import type { User, AuthResponse } from '@cordinate/shared'
 import { apiRequest } from '@/lib/api'
-import { getToken, setToken, removeToken } from '@/lib/auth'
+import Cookies from 'js-cookie'
 
-interface LoginInput {
-  email: string
-  password: string
+const SESSION_COOKIE = 'cordinate_session'
+
+function setSessionCookie(token: string) {
+  // Short-lived indicator cookie for Edge Middleware route protection
+  // The access token itself stays in memory; this is just a signed JWT marker
+  Cookies.set(SESSION_COOKIE, token, { sameSite: 'lax', secure: process.env.NODE_ENV === 'production' })
 }
 
-interface RegisterInput {
-  name: string
-  email: string
-  password: string
-}
-
-interface AuthResponse {
-  accessToken: string
-  user: User
+function clearSessionCookie() {
+  Cookies.remove(SESSION_COOKIE)
 }
 
 interface AuthContextValue {
-  user: User | null | undefined
+  user: User | null
+  accessToken: string | null
   isLoading: boolean
-  login: (input: LoginInput) => Promise<void>
-  logout: () => void
-  register: (input: RegisterInput) => Promise<void>
+  login: (email: string, password: string) => Promise<void>
+  logout: () => Promise<void>
+  register: (name: string, email: string, password: string) => Promise<void>
 }
 
 const AuthContext = createContext<AuthContextValue | null>(null)
+const AuthContextProvider = AuthContext.Provider as React.ComponentType<{
+  value: AuthContextValue
+  children: ReactNode
+}>
 
-function fetchMe(token: string | undefined): Promise<User> | null {
-  if (!token) return null
-  return apiRequest<User>('/auth/me', { token })
-}
+const REFRESH_TOKEN_KEY = 'cordinate_refresh'
 
-export function AuthProvider({ children }: { children: ReactNode }) {
-  const token = getToken()
+export function AuthProvider({ children }: { children: ReactNode }): React.JSX.Element {
+  // Access token is kept only in memory to prevent XSS token theft
+  // Refresh token is persisted in localStorage (longer-lived, used only to re-issue access tokens)
+  const [accessToken, setAccessToken] = useState<string | null>(null)
+  const [user, setUser] = useState<User | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
 
-  const { data: user, mutate, isLoading } = useSWR<User>(
-    token ? '/auth/me' : null,
-    () => fetchMe(token) as Promise<User>,
-    { revalidateOnFocus: false }
-  )
+  // On mount: restore session via persisted refresh token
+  useEffect(() => {
+    const storedRefresh = localStorage.getItem(REFRESH_TOKEN_KEY)
+    if (!storedRefresh) {
+      setIsLoading(false)
+      return
+    }
+    apiRequest<{ data: { accessToken: string; refreshToken: string } }>('/auth/refresh', {
+      method: 'POST',
+      body: JSON.stringify({ refreshToken: storedRefresh }),
+    })
+      .then(async (res) => {
+        setAccessToken(res.data.accessToken)
+        localStorage.setItem(REFRESH_TOKEN_KEY, res.data.refreshToken)
+        const meRes = await apiRequest<{ data: User }>('/auth/me', { token: res.data.accessToken })
+        setUser(meRes.data)
+      })
+      .catch(() => localStorage.removeItem(REFRESH_TOKEN_KEY))
+      .finally(() => setIsLoading(false))
+  }, [])
 
-  const login = useCallback(async ({ email, password }: LoginInput) => {
-    const res = await apiRequest<AuthResponse>('/auth/login', {
+  const login = useCallback(async (email: string, password: string) => {
+    const res = await apiRequest<{ data: AuthResponse }>('/auth/login', {
       method: 'POST',
       body: JSON.stringify({ email, password }),
     })
-    setToken(res.accessToken)
-    await mutate(res.user, false)
-  }, [mutate])
+    setAccessToken(res.data.accessToken)
+    setSessionCookie(res.data.accessToken)
+    localStorage.setItem(REFRESH_TOKEN_KEY, res.data.refreshToken)
+    setUser(res.data.user as User)
+  }, [])
 
-  const logout = useCallback(() => {
-    removeToken()
-    mutate(undefined, false)
-  }, [mutate])
+  const logout = useCallback(async () => {
+    const refreshToken = localStorage.getItem(REFRESH_TOKEN_KEY)
+    if (accessToken && refreshToken) {
+      await apiRequest('/auth/logout', {
+        method: 'POST',
+        token: accessToken,
+        body: JSON.stringify({ refreshToken }),
+      }).catch(() => {/* server-side failure is non-fatal for client logout */})
+    }
+    setAccessToken(null)
+    setUser(null)
+    clearSessionCookie()
+    localStorage.removeItem(REFRESH_TOKEN_KEY)
+  }, [accessToken])
 
-  const register = useCallback(async ({ name, email, password }: RegisterInput) => {
-    const res = await apiRequest<AuthResponse>('/auth/register', {
+  const register = useCallback(async (name: string, email: string, password: string) => {
+    const res = await apiRequest<{ data: AuthResponse }>('/auth/register', {
       method: 'POST',
       body: JSON.stringify({ name, email, password }),
     })
-    setToken(res.accessToken)
-    await mutate(res.user, false)
-  }, [mutate])
+    setAccessToken(res.data.accessToken)
+    setSessionCookie(res.data.accessToken)
+    localStorage.setItem(REFRESH_TOKEN_KEY, res.data.refreshToken)
+    setUser(res.data.user as User)
+  }, [])
 
-  const value: AuthContextValue = { user: user ?? null, isLoading, login, logout, register }
-  // React 19 + @types/react 19: use context.Provider via type assertion
-  const Provider = AuthContext.Provider as React.ComponentType<{ value: AuthContextValue; children: ReactNode }>
-  return <Provider value={value}>{children}</Provider>
+  const value: AuthContextValue = { user, accessToken, isLoading, login, logout, register }
+  return <AuthContextProvider value={value}>{children}</AuthContextProvider>
 }
 
 export function useAuth(): AuthContextValue {

@@ -1,15 +1,16 @@
-import * as SecureStore from 'expo-secure-store'
-
 const API_URL = process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:3001'
 
-export async function apiRequest<T>(path: string, options?: RequestInit): Promise<T> {
-  const token = await SecureStore.getItemAsync('access_token')
+export async function apiRequest<T>(
+  path: string,
+  options?: RequestInit & { token?: string }
+): Promise<T> {
+  const { token, ...fetchOptions } = options ?? {}
   const res = await fetch(`${API_URL}${path}`, {
-    ...options,
+    ...fetchOptions,
     headers: {
       'Content-Type': 'application/json',
       ...(token ? { Authorization: `Bearer ${token}` } : {}),
-      ...options?.headers,
+      ...fetchOptions.headers,
     },
   })
 
