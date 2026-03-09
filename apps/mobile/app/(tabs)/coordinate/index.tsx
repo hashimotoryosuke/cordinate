@@ -70,7 +70,7 @@ export default function CoordinateScreen() {
 
   function renderItem({ item }: { item: Coordinate }) {
     return (
-      <TouchableOpacity style={styles.card} activeOpacity={0.8}>
+      <TouchableOpacity style={styles.card} activeOpacity={0.8} onPress={() => router.push({ pathname: '/(tabs)/coordinate/[id]', params: { id: item.id } })}>
         <Image
           source={{ uri: item.inspirationImageUrl }}
           style={styles.cardImage}
