@@ -74,13 +74,22 @@ export default function ClosetPage(): React.JSX.Element {
         >
           クローゼット
         </h1>
-        <button
-          onClick={handleLogout}
-          className="text-xs px-3 py-1 rounded-md border transition-colors"
-          style={{ borderColor: 'var(--color-border)', color: 'var(--color-muted-foreground)' }}
-        >
-          ログアウト
-        </button>
+        <div className="flex items-center gap-2">
+          <Link
+            href="/coordinate"
+            className="text-xs px-3 py-1 rounded-md border transition-colors"
+            style={{ borderColor: 'var(--color-border)', color: 'var(--color-muted-foreground)' }}
+          >
+            コーデ
+          </Link>
+          <button
+            onClick={handleLogout}
+            className="text-xs px-3 py-1 rounded-md border transition-colors"
+            style={{ borderColor: 'var(--color-border)', color: 'var(--color-muted-foreground)' }}
+          >
+            ログアウト
+          </button>
+        </div>
       </header>
 
       {/* Category filter tabs */}
@@ -115,8 +124,8 @@ export default function ClosetPage(): React.JSX.Element {
         {isLoading && (
           <div className="flex items-center justify-center py-20">
             <div
-              className="h-8 w-8 animate-spin rounded-full border-2 border-t-transparent"
-              style={{ borderColor: 'var(--color-accent)' }}
+              className="h-8 w-8 animate-spin rounded-full border-2"
+              style={{ borderColor: 'var(--color-accent)', borderTopColor: 'transparent' }}
             />
           </div>
         )}

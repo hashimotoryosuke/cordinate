@@ -150,7 +150,7 @@ export default function NewClosetPage(): React.JSX.Element {
             >
               {isUploading ? (
                 <span className="flex items-center justify-center gap-2">
-                  <span className="h-4 w-4 animate-spin rounded-full border-2 border-t-transparent" style={{ borderColor: 'var(--color-primary-foreground)' }} />
+                  <span className="h-4 w-4 animate-spin rounded-full border-2" style={{ borderColor: 'var(--color-primary-foreground)', borderTopColor: 'transparent' }} />
                   {statusLabel[status]}
                 </span>
               ) : statusLabel[status]}
