@@ -48,9 +48,18 @@ export default function SuggestScreen() {
   const [savingIndex, setSavingIndex] = useState<number | null>(null)
   const [saveError, setSaveError] = useState<string | null>(null)
   const intervalRef = useRef<ReturnType<typeof setInterval> | null>(null)
+  const timeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const POLL_INTERVAL_MS = 2000
+  const MAX_POLL_MS = 2 * 60 * 1000  // 2 minutes
 
   useEffect(() => {
     if (!jobId) return
+
+    function stopPolling() {
+      if (intervalRef.current) { clearInterval(intervalRef.current); intervalRef.current = null }
+      if (timeoutRef.current) { clearTimeout(timeoutRef.current); timeoutRef.current = null }
+    }
 
     async function pollJob() {
       try {
@@ -60,26 +69,26 @@ export default function SuggestScreen() {
         )
         const data = res.data
         setJob(data)
-        if (data.status === 'done' || data.status === 'error') {
-          if (intervalRef.current) {
-            clearInterval(intervalRef.current)
-            intervalRef.current = null
-          }
-        }
+        if (data.status === 'done' || data.status === 'error') stopPolling()
       } catch {
-        // keep polling on transient errors
+        // keep polling on transient network errors
       }
     }
 
     pollJob()
-    intervalRef.current = setInterval(pollJob, 2000)
+    intervalRef.current = setInterval(pollJob, POLL_INTERVAL_MS)
 
-    return () => {
-      if (intervalRef.current) {
-        clearInterval(intervalRef.current)
-        intervalRef.current = null
-      }
-    }
+    // [R2-3] Hard timeout: stop polling and show error after MAX_POLL_MS
+    timeoutRef.current = setTimeout(() => {
+      stopPolling()
+      setJob((prev) =>
+        prev?.status === 'done' || prev?.status === 'error'
+          ? prev
+          : { id: jobId, status: 'error', suggestions: [], errorMessage: 'タイムアウトしました。もう一度お試しください。' }
+      )
+    }, MAX_POLL_MS)
+
+    return stopPolling
   }, [jobId, token])
 
   async function handleSave(suggestion: Suggestion, index: number) {

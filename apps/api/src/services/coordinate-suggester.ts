@@ -127,14 +127,21 @@ export async function suggestCoordinates(
       ? (rawType as 'image/jpeg' | 'image/png' | 'image/webp' | 'image/gif')
       : 'image/jpeg'
 
-    // Fetch user's closet items (bounded)
-    const allItems = await db.select().from(clothingItems).where(eq(clothingItems.userId, userId))
-    const userItems = allItems.slice(0, MAX_CLOSET_ITEMS)
+    // Fetch user's closet items (bounded at DB level)
+    const userItems = await db
+      .select()
+      .from(clothingItems)
+      .where(eq(clothingItems.userId, userId))
+      .limit(MAX_CLOSET_ITEMS)
 
     if (userItems.length < 3) {
       await db.update(coordinateJobs)
         .set({ status: 'error', errorMessage: 'クローゼットにアイテムが少なすぎます（3件以上必要です）', updatedAt: new Date() })
         .where(eq(coordinateJobs.id, jobId))
+      // [R2-2] Also update inspiration status
+      await db.update(inspirations)
+        .set({ status: 'error' })
+        .where(eq(inspirations.id, inspirationId))
       return
     }
 
