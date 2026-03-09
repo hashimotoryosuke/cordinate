@@ -46,6 +46,16 @@ export default function TabsLayout() {
         }}
       />
       <Tabs.Screen
+        name="coordinate"
+        options={{
+          title: 'コーデ',
+          headerShown: false,
+          tabBarIcon: ({ color, size }) => (
+            <Ionicons name="sparkles-outline" size={size} color={color} />
+          ),
+        }}
+      />
+      <Tabs.Screen
         name="settings"
         options={{
           title: '設定',

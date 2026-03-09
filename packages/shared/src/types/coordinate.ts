@@ -26,3 +26,19 @@ export interface CoordinateProposal {
   styleNote: string
   matchScore: number
 }
+
+// Phase 2 types
+
+export interface CoordinateProposalV2 {
+  itemIds: string[]
+  description: string
+  matchScore: number
+  styleNote: string
+}
+
+export interface CoordinateJob {
+  id: string
+  status: 'pending' | 'processing' | 'done' | 'error'
+  suggestions?: CoordinateProposalV2[]
+  errorMessage?: string
+}

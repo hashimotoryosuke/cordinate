@@ -90,6 +90,47 @@ export const refreshTokens = pgTable(
   (t) => [index('refresh_tokens_user_id_idx').on(t.userId)]
 )
 
+export const inspirations = pgTable(
+  'inspirations',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    imageUrl: text('image_url').notNull(),
+    status: varchar('status', { length: 20 }).notNull().default('pending'), // 'pending'|'analyzing'|'done'|'error'
+    analysisData: jsonb('analysis_data'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => [index('inspirations_user_id_idx').on(t.userId)]
+)
+
+export type CoordinateJobSuggestion = {
+  itemIds: string[]
+  description: string
+  matchScore: number
+  styleNote: string
+}
+
+export const coordinateJobs = pgTable(
+  'coordinate_jobs',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    inspirationId: uuid('inspiration_id')
+      .notNull()
+      .references(() => inspirations.id, { onDelete: 'cascade' }),
+    status: varchar('status', { length: 20 }).notNull().default('pending'), // 'pending'|'processing'|'done'|'error'
+    suggestions: jsonb('suggestions').$type<CoordinateJobSuggestion[]>(),
+    errorMessage: text('error_message'),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+    updatedAt: timestamp('updated_at').defaultNow().notNull(),
+  },
+  (t) => [index('coordinate_jobs_user_id_idx').on(t.userId)]
+)
+
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
 export type ClothingItem = typeof clothingItems.$inferSelect
@@ -99,3 +140,7 @@ export type NewCoordinate = typeof coordinates.$inferInsert
 export type ProductSuggestion = typeof productSuggestions.$inferSelect
 export type NewProductSuggestion = typeof productSuggestions.$inferInsert
 export type RefreshToken = typeof refreshTokens.$inferSelect
+export type Inspiration = typeof inspirations.$inferSelect
+export type NewInspiration = typeof inspirations.$inferInsert
+export type CoordinateJob = typeof coordinateJobs.$inferSelect
+export type NewCoordinateJob = typeof coordinateJobs.$inferInsert
