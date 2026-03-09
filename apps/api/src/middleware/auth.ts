@@ -1,8 +1,7 @@
 import { createMiddleware } from 'hono/factory'
 import { HTTPException } from 'hono/http-exception'
 import { jwtVerify } from 'jose'
-
-const JWT_SECRET = new TextEncoder().encode(process.env.JWT_SECRET ?? 'dev-secret-change-in-prod')
+import { config } from '../config'
 
 export type AuthUser = { userId: string; email: string }
 
@@ -16,7 +15,7 @@ export const authMiddleware = createMiddleware<{
 
   const token = authorization.slice(7)
   try {
-    const { payload } = await jwtVerify(token, JWT_SECRET)
+    const { payload } = await jwtVerify(token, config.jwtSecret)
     c.set('user', { userId: payload.sub as string, email: payload.email as string })
   } catch {
     throw new HTTPException(401, { message: 'Invalid or expired token' })

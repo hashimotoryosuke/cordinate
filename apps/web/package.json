@@ -12,20 +12,23 @@
   "dependencies": {
     "@cordinate/shared": "workspace:*",
     "@cordinate/ui": "workspace:*",
+    "jose": "^5.10.0",
+    "js-cookie": "^3.0.5",
     "next": "15.2.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
-    "zod": "^3.24.2",
-    "swr": "^2.3.3"
+    "swr": "^2.3.3",
+    "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.15",
+    "@types/js-cookie": "^3.0.6",
     "@types/node": "^22.13.14",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
-    "typescript": "^5.8.2",
-    "tailwindcss": "^4.0.15",
-    "@tailwindcss/postcss": "^4.0.15",
     "eslint": "^9.22.0",
-    "eslint-config-next": "15.2.2"
+    "eslint-config-next": "15.2.2",
+    "tailwindcss": "^4.0.15",
+    "typescript": "^5.8.2"
   }
 }

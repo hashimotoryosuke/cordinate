@@ -1,5 +1,4 @@
 import { pgTable, uuid, text, timestamp, varchar, integer, real, index, boolean, jsonb } from 'drizzle-orm/pg-core'
-import { sql } from 'drizzle-orm'
 
 // pgvector extension — enable with: CREATE EXTENSION IF NOT EXISTS vector;
 // Using text for embedding storage; switch to vector(512) after pgvector is enabled
@@ -77,6 +76,20 @@ export const productSuggestions = pgTable(
   (t) => [index('product_suggestions_coordinate_id_idx').on(t.coordinateId)]
 )
 
+export const refreshTokens = pgTable(
+  'refresh_tokens',
+  {
+    id: uuid('id').defaultRandom().primaryKey(),
+    userId: uuid('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    token: text('token').notNull().unique(),
+    expiresAt: timestamp('expires_at').notNull(),
+    createdAt: timestamp('created_at').defaultNow().notNull(),
+  },
+  (t) => [index('refresh_tokens_user_id_idx').on(t.userId)]
+)
+
 export type User = typeof users.$inferSelect
 export type NewUser = typeof users.$inferInsert
 export type ClothingItem = typeof clothingItems.$inferSelect
@@ -85,3 +98,4 @@ export type Coordinate = typeof coordinates.$inferSelect
 export type NewCoordinate = typeof coordinates.$inferInsert
 export type ProductSuggestion = typeof productSuggestions.$inferSelect
 export type NewProductSuggestion = typeof productSuggestions.$inferInsert
+export type RefreshToken = typeof refreshTokens.$inferSelect

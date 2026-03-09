@@ -6,20 +6,13 @@ import { authRoutes } from './routes/auth'
 import { closetRoutes } from './routes/closet'
 import { coordinateRoutes } from './routes/coordinate'
 import { productRoutes } from './routes/product'
+import { uploadRoutes } from './routes/upload'
+import { config } from './config'
 
 const app = new Hono()
 
 app.use('*', logger())
-app.use(
-  '*',
-  cors({
-    origin: [
-      process.env.WEB_URL ?? 'http://localhost:3000',
-      'http://localhost:8081', // Expo dev
-    ],
-    credentials: true,
-  })
-)
+app.use('*', cors({ origin: config.allowedOrigins, credentials: true }))
 
 app.get('/health', (c) => c.json({ status: 'ok' }))
 
@@ -27,8 +20,9 @@ app.route('/auth', authRoutes)
 app.route('/closet', closetRoutes)
 app.route('/coordinates', coordinateRoutes)
 app.route('/products', productRoutes)
+app.route('/upload', uploadRoutes)
 
-const port = Number(process.env.PORT ?? 3001)
+const port = config.port
 
 serve({ fetch: app.fetch, port }, () => {
   console.log(`API server running on http://localhost:${port}`)
