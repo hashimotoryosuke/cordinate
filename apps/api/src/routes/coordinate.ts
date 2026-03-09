@@ -2,40 +2,30 @@ import { Hono } from 'hono'
 import { zValidator } from '@hono/zod-validator'
 import { z } from 'zod'
 import { db } from '../db'
-import { coordinates, inspirations, coordinateJobs } from '../db/schema'
-import { eq, and } from 'drizzle-orm'
+import { coordinates, inspirations, coordinateJobs, clothingItems } from '../db/schema'
+import { eq, and, inArray } from 'drizzle-orm'
 import { authMiddleware } from '../middleware/auth'
-import { enqueueCoordinateSuggestion } from '../services/coordinate-suggester'
-import { config } from '../config'
+import { enqueueCoordinateSuggestion, isExternalUrl } from '../services/coordinate-suggester'
 
 import type { AppEnv } from '../types'
-
-function isAllowedImageUrl(url: string): boolean {
-  try {
-    const { hostname } = new URL(url)
-    return config.allowedImageHosts.some(
-      (h) => hostname === h || hostname.endsWith(`.${h}`)
-    )
-  } catch {
-    return false
-  }
-}
 
 export const coordinateRoutes = new Hono<AppEnv>()
 
 coordinateRoutes.use('*', authMiddleware)
 
-// POST /coordinates/inspire — submit inspiration image, create job
+// POST /coordinates/inspire — submit inspiration image URL, create async job
 coordinateRoutes.post(
   '/inspire',
   zValidator(
     'json',
     z.object({
+      // [C-1] Use IP-blocklist validation (isExternalUrl) instead of allowlist,
+      // so users can paste external web URLs (Instagram, Pinterest, etc.)
       imageUrl: z
         .string()
         .url()
-        .refine(isAllowedImageUrl, {
-          message: 'imageUrl must be from an allowed storage domain',
+        .refine(isExternalUrl, {
+          message: 'imageUrl must be a publicly accessible URL (private/internal addresses are not allowed)',
         }),
     })
   ),
@@ -43,17 +33,23 @@ coordinateRoutes.post(
     const { userId } = c.get('user')
     const { imageUrl } = c.req.valid('json')
 
-    const [inspiration] = await db
-      .insert(inspirations)
-      .values({ userId, imageUrl, status: 'pending' })
-      .returning()
+    // [M-2] Wrap two inserts in a transaction to avoid orphan records
+    const { job, inspiration } = await db.transaction(async (tx) => {
+      const [ins] = await tx
+        .insert(inspirations)
+        .values({ userId, imageUrl, status: 'pending' })
+        .returning()
 
-    const [job] = await db
-      .insert(coordinateJobs)
-      .values({ userId, inspirationId: inspiration.id, status: 'pending' })
-      .returning()
+      const [j] = await tx
+        .insert(coordinateJobs)
+        .values({ userId, inspirationId: ins.id, status: 'pending' })
+        .returning()
 
-    enqueueCoordinateSuggestion(job.id, imageUrl, userId)
+      return { job: j, inspiration: ins }
+    })
+
+    // Enqueue outside transaction (async, non-fatal if it fails)
+    await enqueueCoordinateSuggestion(job.id, inspiration.id, imageUrl, userId)
 
     return c.json({ data: { jobId: job.id, inspirationId: inspiration.id } }, 202)
   }
@@ -84,15 +80,15 @@ coordinateRoutes.get('/jobs/:jobId', async (c) => {
   })
 })
 
-// POST /coordinates — save a coordinate
+// POST /coordinates — save a selected coordinate proposal
 coordinateRoutes.post(
   '/',
   zValidator(
     'json',
     z.object({
       inspirationImageUrl: z.string().url(),
-      itemIds: z.array(z.string()),
-      description: z.string(),
+      itemIds: z.array(z.string().uuid()).min(1),
+      description: z.string().min(1),
       styleNote: z.string().optional(),
       matchScore: z.number().min(0).max(1).optional(),
     })
@@ -100,6 +96,23 @@ coordinateRoutes.post(
   async (c) => {
     const { userId } = c.get('user')
     const { inspirationImageUrl, itemIds, description, styleNote, matchScore } = c.req.valid('json')
+
+    // [C-2] Verify all itemIds belong to this user (prevent IDOR)
+    if (itemIds.length > 0) {
+      const ownedItems = await db
+        .select({ id: clothingItems.id })
+        .from(clothingItems)
+        .where(and(eq(clothingItems.userId, userId), inArray(clothingItems.id, itemIds)))
+
+      const ownedIds = new Set(ownedItems.map((i) => i.id))
+      const invalid = itemIds.filter((id) => !ownedIds.has(id))
+      if (invalid.length > 0) {
+        return c.json(
+          { error: 'One or more itemIds do not exist in your closet', code: 'INVALID_ITEM_IDS', statusCode: 422 },
+          422
+        )
+      }
+    }
 
     const [coord] = await db
       .insert(coordinates)
@@ -111,13 +124,28 @@ coordinateRoutes.post(
 )
 
 // GET /coordinates — list user's saved coordinates
-coordinateRoutes.get('/', async (c) => {
-  const { userId } = c.get('user')
-  const coords = await db.select().from(coordinates).where(eq(coordinates.userId, userId))
-  return c.json({ data: coords })
-})
+coordinateRoutes.get(
+  '/',
+  zValidator('query', z.object({
+    limit: z.coerce.number().min(1).max(100).default(50),
+    offset: z.coerce.number().min(0).default(0),
+  })),
+  async (c) => {
+    const { userId } = c.get('user')
+    const { limit, offset } = c.req.valid('query')
 
-// DELETE /coordinates/:id — delete a coordinate
+    const coords = await db
+      .select()
+      .from(coordinates)
+      .where(eq(coordinates.userId, userId))
+      .limit(limit)
+      .offset(offset)
+
+    return c.json({ data: coords })
+  }
+)
+
+// DELETE /coordinates/:id
 coordinateRoutes.delete('/:id', async (c) => {
   const { userId } = c.get('user')
   const { id } = c.req.param()

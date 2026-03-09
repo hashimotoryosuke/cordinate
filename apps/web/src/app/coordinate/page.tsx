@@ -62,8 +62,8 @@ export default function CoordinatePage(): React.JSX.Element {
         {isLoading && (
           <div className="flex items-center justify-center py-20">
             <div
-              className="h-8 w-8 animate-spin rounded-full border-2 border-t-transparent"
-              style={{ borderColor: 'var(--color-accent)' }}
+              className="h-8 w-8 animate-spin rounded-full border-2"
+              style={{ borderColor: 'var(--color-accent)', borderTopColor: 'transparent' }}
             />
           </div>
         )}

@@ -83,8 +83,8 @@ export default function CoordinateSuggestPage({ params }: PageProps): React.JSX.
         style={{ backgroundColor: 'var(--color-background)' }}
       >
         <div
-          className="h-10 w-10 animate-spin rounded-full border-2 border-t-transparent"
-          style={{ borderColor: 'var(--color-accent)' }}
+          className="h-10 w-10 animate-spin rounded-full border-2"
+          style={{ borderColor: 'var(--color-accent)', borderTopColor: 'transparent' }}
         />
         <p className="font-medium" style={{ color: 'var(--color-foreground)' }}>
           AIがコーデを提案しています...
