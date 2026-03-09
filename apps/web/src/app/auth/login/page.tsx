@@ -2,14 +2,19 @@
 import React from 'react'
 
 
-import { useState, type FormEvent } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function LoginPage(): React.JSX.Element {
   const router = useRouter()
-  const { login } = useAuth()
+  const { login, user, isLoading } = useAuth()
+
+  // Auto-redirect already-authenticated users (e.g. after session restore on hard refresh)
+  useEffect(() => {
+    if (!isLoading && user) router.replace('/closet')
+  }, [isLoading, user, router])
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')

@@ -34,9 +34,10 @@ const CATEGORY_ORDER: CategoryFilter[] = [
   'other',
 ]
 
-function fetchCloset(token: string | null): Promise<ClothingItem[]> {
+async function fetchCloset(token: string | null): Promise<ClothingItem[]> {
   if (!token) throw new Error('Unauthorized')
-  return apiRequest<ClothingItem[]>('/closet', { token })
+  const res = await apiRequest<{ data: ClothingItem[] }>('/closet', { token })
+  return res.data
 }
 
 export default function ClosetPage(): React.JSX.Element {

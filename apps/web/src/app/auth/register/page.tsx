@@ -2,14 +2,18 @@
 import React from 'react'
 
 
-import { useState, type FormEvent } from 'react'
+import { useState, useEffect, type FormEvent } from 'react'
 import { useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '@/contexts/AuthContext'
 
 export default function RegisterPage(): React.JSX.Element {
   const router = useRouter()
-  const { register } = useAuth()
+  const { register, user, isLoading } = useAuth()
+
+  useEffect(() => {
+    if (!isLoading && user) router.replace('/closet')
+  }, [isLoading, user, router])
 
   const [name, setName] = useState('')
   const [email, setEmail] = useState('')

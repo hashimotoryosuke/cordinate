@@ -61,11 +61,15 @@ export function AuthProvider({ children }: { children: ReactNode }): React.JSX.E
     })
       .then(async (res) => {
         setAccessToken(res.data.accessToken)
+        setSessionCookie(res.data.accessToken)
         localStorage.setItem(REFRESH_TOKEN_KEY, res.data.refreshToken)
         const meRes = await apiRequest<{ data: User }>('/auth/me', { token: res.data.accessToken })
         setUser(meRes.data)
       })
-      .catch(() => localStorage.removeItem(REFRESH_TOKEN_KEY))
+      .catch(() => {
+        clearSessionCookie()
+        localStorage.removeItem(REFRESH_TOKEN_KEY)
+      })
       .finally(() => setIsLoading(false))
   }, [])
 
